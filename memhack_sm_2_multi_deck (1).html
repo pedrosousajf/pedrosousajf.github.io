@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemHack PRO - Google Sheets & SM-2 & Gemini AI</title>
+    <!-- Tailwind CSS para design responsivo e moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons para suporte visual -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Cabeçalho Fixo com Indicador de Nuvem -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+            <button id="btn-back-to-decks" class="hidden text-slate-500 hover:text-indigo-600 p-1.5 rounded-lg transition flex items-center gap-1" title="Voltar para os Baralhos">
+                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                <span class="text-xs font-bold">Baralhos</span>
+            </button>
+            
+            <div id="brand-logo" class="flex items-center gap-2">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md shadow-indigo-100">
+                    <i data-lucide="layers" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm leading-none text-slate-950">MemHack <span class="text-indigo-600">Sheets</span></h1>
+                    <span class="text-[9px] text-slate-400 font-bold tracking-wider uppercase flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" id="sync-status-dot"></span>
+                        <span id="sync-status-text">Conectado ao Drive</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1">
+                <!-- Controle de Simulação de Tempo -->
+                <button id="btn-time-travel" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition" title="Avançar 1 dia para liberar revisões agendadas">
+                    <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> +1 Dia
+                </button>
+                <button id="btn-stats" class="text-slate-500 hover:text-indigo-600 p-1.5 rounded-lg transition" title="Estatísticas Gerais">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                </button>
+                <button id="btn-settings" class="text-slate-500 hover:text-indigo-600 p-1.5 rounded-lg transition" title="Configurações">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Área de Conteúdo Principal -->
+    <main class="flex-1 max-w-md w-full mx-auto p-4 flex flex-col pb-24">
+        
+        <!-- Alerta Flutuante de Feedback -->
+        <div id="alert-box" class="hidden mb-3 p-3 rounded-xl text-xs font-medium text-center animate-pulse"></div>
+
+        <!-- Indicador Global de Simulação de Tempo -->
+        <div id="time-travel-badge" class="hidden mb-3 bg-amber-500 text-white text-[11px] font-bold py-1 px-3 rounded-full text-center shadow-sm">
+            ⏳ Simulação: Avançado <span id="days-advanced">0</span> dia(s) no futuro
+        </div>
+
+        <!-- ================= TELA 1: SELEÇÃO DE BARALHOS ================= -->
+        <section id="screen-decks" class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-base font-bold text-slate-900">Seus Baralhos</h2>
+                <span class="text-xs text-slate-400 font-medium" id="total-cards-label">Buscando na nuvem...</span>
+            </div>
+            
+            <!-- Lista Dinâmica de Baralhos -->
+            <div id="decks-list-container" class="space-y-3">
+                <!-- Preenchido dinamicamente via JS -->
+            </div>
+
+            <!-- Botão para Criar Novo Baralho Rápido -->
+            <button onclick="openModal('modal-add-card')" class="w-full bg-white border border-dashed border-slate-300 hover:border-indigo-500 text-slate-500 hover:text-indigo-600 transition p-4 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> Criar Novo Card ou Baralho
+            </button>
+        </section>
+
+        <!-- ================= TELA 2: ÁREA DE ESTUDOS (FLASHCARDS) ================= -->
+        <section id="screen-study" class="hidden flex-1 flex flex-col justify-center min-h-[420px]">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 flex flex-col justify-between min-h-[380px] relative overflow-hidden transition-all duration-300">
+                
+                <!-- Cabeçalho do Card de Estudo -->
+                <div class="flex justify-between items-center text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                    <span id="queue-counter">0 de 0 na fila</span>
+                    <span id="card-metadata" class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <!-- Metadados do SM-2 -->
+                    </span>
+                </div>
+
+                <!-- Conteúdo Central -->
+                <div class="flex-1 flex flex-col justify-center items-center text-center my-3 space-y-4">
+                    <div class="space-y-1 w-full">
+                        <p class="text-[9px] text-slate-400 font-bold tracking-widest uppercase" id="study-deck-title">BARALHO</p>
+                        <h2 id="display-front" class="text-2xl font-bold text-slate-900 leading-snug px-2"></h2>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <!-- Player de Voz Nativo (Listening) -->
+                        <button id="audio-play-btn" class="hidden bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 p-3 rounded-full transition-all duration-200 active:scale-90" title="Ouvir pronúncia">
+                            <i data-lucide="volume-2" class="w-5 h-5"></i>
+                        </button>
+                        
+                        <!-- Botão Inteligente Gemini: Explicar com IA -->
+                        <button id="gemini-explain-btn" class="hidden bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-4 py-2.5 rounded-full transition-all duration-200 text-xs font-bold flex items-center gap-1.5 active:scale-95 shadow-sm border border-indigo-100" title="Explicar contexto e uso com IA">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600 animate-pulse"></i> Explicar com IA
+                        </button>
+                    </div>
+
+                    <!-- Resposta (Revelada) -->
+                    <div id="verso-container" class="hidden w-full pt-4 border-t border-dashed border-slate-200 space-y-2">
+                        <p class="text-[9px] text-slate-400 font-bold tracking-widest uppercase">TRADUÇÃO NATURAL:</p>
+                        <h3 id="display-back" class="text-xl font-bold text-indigo-600"></h3>
+                        <p id="display-context" class="text-xs text-slate-500 italic px-2"></p>
+                    </div>
+                </div>
+
+                <!-- Praticar Fala (Speaking) -->
+                <div id="voice-recording-area" class="hidden w-full flex flex-col items-center gap-2 py-3 bg-slate-50 rounded-2xl border border-slate-100 mb-4">
+                    <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                        <i data-lucide="mic" class="w-3.5 h-3.5 text-indigo-600"></i> Praticar Fala (Speaking)
+                    </span>
+                    <div class="flex items-center gap-3">
+                        <button id="record-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white p-3.5 rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all">
+                            <i data-lucide="mic" class="w-5 h-5" id="mic-icon-svg"></i>
+                        </button>
+                        <!-- Avaliar com IA -->
+                        <button id="gemini-eval-speech-btn" class="hidden bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 active:scale-95 shadow-sm">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Avaliar com IA
+                        </button>
+                    </div>
+                    <span id="record-instructions" class="text-[10px] text-slate-400 text-center px-4">Pressione para falar o chunk</span>
+                    <div id="speech-transcript" class="hidden w-full flex justify-center"></div>
+                </div>
+
+                <!-- Botão de Revelar -->
+                <button id="reveal-btn" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-4 rounded-2xl transition shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                    <i data-lucide="eye" class="w-5 h-5"></i> Revelar Resposta & Ouvir
+                </button>
+
+                <!-- Feedback do SM-2 (4 Opções de Memorização) -->
+                <div id="anki-feedback-panel" class="hidden flex flex-col gap-2">
+                    <p class="text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Como foi lembrar dessa frase?</p>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <!-- Novamente -->
+                        <button onclick="assessCard(0)" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-700 transition active:scale-95">
+                            <span class="text-[11px] font-extrabold">Novamente</span>
+                            <span class="text-[8px] font-medium text-rose-500 mt-0.5">Imediato</span>
+                        </button>
+                        <!-- Difícil -->
+                        <button onclick="assessCard(3)" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-100 text-amber-700 transition active:scale-95">
+                            <span class="text-[11px] font-extrabold">Difícil</span>
+                            <span id="label-easy-interval-3" class="text-[8px] font-medium text-amber-500 mt-0.5">1d</span>
+                        </button>
+                        <!-- Bom -->
+                        <button onclick="assessCard(4)" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-100 text-blue-700 transition active:scale-95">
+                            <span class="text-[11px] font-extrabold">Bom</span>
+                            <span id="label-easy-interval-4" class="text-[8px] font-medium text-blue-500 mt-0.5">4d</span>
+                        </button>
+                        <!-- Fácil -->
+                        <button onclick="assessCard(5)" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-700 transition active:scale-95">
+                            <span class="text-[11px] font-extrabold">Fácil</span>
+                            <span id="label-easy-interval-5" class="text-[8px] font-medium text-emerald-500 mt-0.5">6d</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Barra de Navegação Inferior -->
+    <nav class="bg-white border-t border-slate-200 fixed bottom-0 left-0 right-0 py-2 shadow-lg z-20">
+        <div class="max-w-md mx-auto px-6 flex justify-around items-center">
+            <button id="nav-decks" class="flex flex-col items-center gap-0.5 py-1 px-3 text-indigo-600 transition">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Baralhos</span>
+            </button>
+            <button id="nav-add" class="flex flex-col items-center gap-0.5 py-1 px-3 text-slate-400 hover:text-indigo-500 transition">
+                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Novo Card</span>
+            </button>
+            <button id="nav-list" class="flex flex-col items-center gap-0.5 py-1 px-3 text-slate-400 hover:text-indigo-500 transition">
+                <i data-lucide="database" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Ver Tudo</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL 1: CRIAR CARD COM ESCOLHA DE BARALHO / IMPORTAÇÃO GEMINI -->
+    <div id="modal-add-card" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3 flex-shrink-0">
+                <h3 class="text-sm font-bold text-slate-950 flex items-center gap-1.5">
+                    <i data-lucide="pencil-line" class="text-indigo-600 w-5 h-5"></i> Adicionar Chunks
+                </h3>
+                <button onclick="closeModal('modal-add-card')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Seletores de Abas do Modal -->
+            <div class="flex border-b border-slate-100 mb-3 text-xs font-semibold flex-shrink-0">
+                <button id="tab-add-manual" class="flex-1 pb-2 border-b-2 border-indigo-600 text-indigo-600">Manual</button>
+                <button id="tab-add-ai" class="flex-1 pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-500"></i> Extração Inteligente (IA)
+                </button>
+            </div>
+            
+            <div class="overflow-y-auto flex-1 pr-1 custom-scroll">
+                <!-- FORMULÁRIO MANUAL -->
+                <form id="card-creation-form" class="space-y-3.5">
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Selecionar Baralho (Grupo)</label>
+                        <select id="select-deck" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-semibold">
+                            <!-- Preenchido dinamicamente -->
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2 py-1">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Ou</span>
+                        <div class="flex-1 border-b border-slate-200"></div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Criar Novo Baralho (Se desejar)</label>
+                        <input type="text" id="new-deck-name" placeholder="Ex: Viagens, Negócios, Gírias..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-medium">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Frase em Inglês (Chunk)</label>
+                        <input type="text" id="input-english" placeholder="Ex: By the way..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-semibold" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Tradução Natural em Português</label>
+                        <input type="text" id="input-portuguese" placeholder="Ex: A propósito / Por falar nisso..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Contexto ou Notas de Uso</label>
+                        <textarea id="input-context" placeholder="Ex: Usado quando você quer mudar o assunto de forma casual." rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-[11px]"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl shadow-lg transition active:scale-95">
+                        Salvar Card
+                    </button>
+                </form>
+
+                <!-- INTERFACE GEMINI AI EXTRACTOR -->
+                <div id="ai-extraction-container" class="hidden space-y-3.5">
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Selecionar Baralho de Destino</label>
+                        <select id="select-deck-ai" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none text-xs font-semibold">
+                            <!-- Preenchido dinamicamente -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Cole um Texto/Capítulo do seu livro</label>
+                        <textarea id="ai-input-text" placeholder="Cole aqui parágrafos em inglês contendo expressões que você quer aprender ou o conteúdo extraído do PDF..." rows="5" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-[11px]"></textarea>
+                    </div>
+                    <button id="btn-generate-ai-chunks" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl shadow-lg transition active:scale-95 flex items-center justify-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i> Extrair Chunks com Gemini
+                    </button>
+
+                    <div id="ai-preview-section" class="hidden space-y-2.5 mt-4 pt-3 border-t border-slate-100">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-extrabold uppercase text-slate-400">Cards Gerados pela IA</span>
+                            <button id="btn-import-ai-selected" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-[10px] transition shadow">Importar Selecionados</button>
+                        </div>
+                        <div id="ai-preview-list" class="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                            <!-- Cards sugeridos com checkbox -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: VER TODOS OS CARDS CADASTRADOS -->
+    <div id="modal-deck-list" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-md h-[80vh] rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col z-50">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <div class="flex items-center gap-1.5">
+                    <i data-lucide="database" class="text-indigo-600 w-5 h-5"></i>
+                    <h3 class="text-base font-bold text-slate-950">Todos os Chunks</h3>
+                </div>
+                <button onclick="closeModal('modal-deck-list')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <!-- Lista com Scroll -->
+            <div id="deck-items-holder" class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scroll">
+                <!-- Inserido dinamicamente via Javascript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ESTATÍSTICAS E PAINEL -->
+    <div id="modal-stats-dashboard" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base font-bold text-slate-950 flex items-center gap-1.5">
+                    <i data-lucide="trending-up" class="text-indigo-600 w-5 h-5"></i> Estatísticas do SM-2
+                </h3>
+                <button onclick="closeModal('modal-stats-dashboard')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-center">
+                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                    <p class="text-3xl font-extrabold text-indigo-700" id="stat-total-cards">0</p>
+                    <p class="text-[9px] font-bold text-indigo-500 uppercase tracking-wider mt-1">Total de Chunks</p>
+                </div>
+                <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                    <p class="text-3xl font-extrabold text-emerald-700" id="stat-matured-cards">0</p>
+                    <p class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider mt-1">Maduros (I > 15 dias)</p>
+                </div>
+            </div>
+            <div class="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-500 space-y-1.5">
+                <h4 class="font-bold text-slate-700 flex items-center gap-1">
+                    <i data-lucide="lightbulb" class="w-4 h-4 text-amber-500"></i> Como funciona a fila?
+                </h4>
+                <p class="leading-relaxed">Apenas os cards cuja **Próxima Revisão** seja menor ou igual à data simulada aparecem para estudar hoje. Se não houver nada agendado, você está livre para o dia!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: EXPLICAÇÃO GEMINI INTELIGENTE -->
+    <div id="modal-gemini-explain" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3 flex-shrink-0">
+                <h3 class="text-sm font-bold text-slate-950 flex items-center gap-1.5">
+                    <i data-lucide="sparkles" class="text-indigo-600 w-5 h-5 animate-spin"></i> Explicação de Chunk com Gemini
+                </h3>
+                <button onclick="closeModal('modal-gemini-explain')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="gemini-explain-body" class="overflow-y-auto flex-1 pr-1 custom-scroll text-xs text-slate-700 leading-relaxed space-y-3">
+                <!-- Preenchido dinamicamente pelo Gemini -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: CONFIGURAÇÕES -->
+    <div id="modal-settings" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col animate-in fade-in zoom-in duration-200">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h3 class="text-sm font-bold text-slate-950 flex items-center gap-1.5">
+                    <i data-lucide="settings" class="text-indigo-600 w-5 h-5"></i> Configurações
+                </h3>
+                <button onclick="closeModal('modal-settings')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <form id="settings-form" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Gemini API Key</label>
+                    <input type="text" id="settings-api-key" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-mono" placeholder="Insira sua API Key">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">URL do Google Apps Script</label>
+                    <input type="url" id="settings-apps-script" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-mono" placeholder="https://script.google.com/...">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">Voz do Sintetizador (Text-to-Speech)</label>
+                    <select id="settings-tts-voice" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-semibold">
+                        <!-- Preenchido dinamicamente -->
+                    </select>
+                </div>
+                
+                <div class="flex gap-2 pt-2">
+                    <button type="button" id="btn-reset-settings" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition">
+                        Restaurar Padrões
+                    </button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- OVERLAY DE LOAD -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex flex-col items-center justify-center z-[100] transition-all duration-300">
+        <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-4 border border-slate-100">
+            <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wider" id="loading-message">Sincronizando Nuvem...</p>
+        </div>
+    </div>
+
+    <!-- DIÁLOGO DE CONFIRMAÇÃO PERSONALIZADO -->
+    <div id="custom-confirm-dialog" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-[90]">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex items-center gap-2.5 text-rose-600">
+                <div class="bg-rose-50 p-2 rounded-xl">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <h4 class="font-bold text-slate-900" id="confirm-title">Confirmar Ação</h4>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed" id="confirm-description">Você deseja confirmar essa operação?</p>
+            <div class="flex gap-2.5 pt-2">
+                <button id="btn-confirm-cancel" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition">
+                    Cancelar
+                </button>
+                <button id="btn-confirm-ok" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl text-xs transition">
+                    Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inicialização de ícones Lucide
+        lucide.createIcons();
+
+        // Configuração Padrão
+        const DEFAULT_API_KEY = "AQ.Ab8RN6J7fHD2hkYQD-GgdGYmiaBAAYmOgg1TsAXO7x5tX4RWvQ";
+        const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwMan2DfSaEkpk2f1tz2sCl9wmna7e4UMUCOdGCGifIHvpb7DKzLnwSY83-29wfssjw/exec";
+
+        // Configuração de API dinâmica do Google Apps Script e Gemini Key
+        let API_URL = localStorage.getItem('memhack_api_url') || DEFAULT_API_URL;
+        let GEMINI_API_KEY = localStorage.getItem('memhack_api_key') || DEFAULT_API_KEY;
+        let SELECTED_VOICE_NAME = localStorage.getItem('memhack_tts_voice') || '';
+
+        // Banco de Dados Auxiliar de Contingência
+        const initialDeck = [
+            { id: 1, deckName: "Puxando Assunto", english: "How have you been?", portuguese: "Como você tem passado?", context: "Ótima maneira informal de perguntar o bem-estar de um conhecido.", interval: 1, repetitions: 0, easeFactor: 2.5, nextReview: new Date().toISOString().split('T')[0] },
+            { id: 2, deckName: "Conectores", english: "By the way...", portuguese: "Por falar nisso... / A propósito...", context: "Usado para mudar de assunto de forma educada.", interval: 1, repetitions: 0, easeFactor: 2.5, nextReview: new Date().toISOString().split('T')[0] },
+            { id: 3, deckName: "Situações Diárias", english: "I can't make it today.", portuguese: "Não vai dar para ir hoje.", context: "Muito utilizado para desmarcar compromissos educadamente.", interval: 1, repetitions: 0, easeFactor: 2.5, nextReview: new Date().toISOString().split('T')[0] }
+        ];
+
+        // Estado Geral da Aplicação
+        let deck = [];
+        let activeDeckName = null; 
+        let studyQueue = [];
+        let currentQueueIndex = -1;
+        let daysAdvancedSimulated = 0; 
+        let currentExtractedAiCards = []; 
+
+        // Fila de Sincronização em Segundo Plano (Offline-First Queue)
+        let syncQueue = [];
+        let isSyncProcessing = false;
+
+        // Elementos UI
+        const displayFront = document.getElementById('display-front');
+        const displayBack = document.getElementById('display-back');
+        const displayContext = document.getElementById('display-context');
+        const queueCounter = document.getElementById('queue-counter');
+        const audioPlayBtn = document.getElementById('audio-play-btn');
+        const geminiExplainBtn = document.getElementById('gemini-explain-btn');
+        const revealBtn = document.getElementById('reveal-btn');
+        const ankiFeedbackPanel = document.getElementById('anki-feedback-panel');
+        const versoContainer = document.getElementById('verso-container');
+        const voiceRecordingArea = document.getElementById('voice-recording-area');
+        const recordBtn = document.getElementById('record-btn');
+        const geminiEvalSpeechBtn = document.getElementById('gemini-eval-speech-btn');
+        const recordInstructions = document.getElementById('record-instructions');
+        const micIconSvg = document.getElementById('mic-icon-svg');
+        const alertBox = document.getElementById('alert-box');
+        const speechTranscript = document.getElementById('speech-transcript');
+        const timeTravelBadge = document.getElementById('time-travel-badge');
+        const daysAdvancedText = document.getElementById('days-advanced');
+        
+        // Elementos de Telas
+        const screenDecks = document.getElementById('screen-decks');
+        const screenStudy = document.getElementById('screen-study');
+        const btnBackToDecks = document.getElementById('btn-back-to-decks');
+        const brandLogo = document.getElementById('brand-logo');
+
+        // Indicadores do Cloud Sync
+        const syncStatusDot = document.getElementById('sync-status-dot');
+        const syncStatusText = document.getElementById('sync-status-text');
+
+        // Inicialização estruturada (Stale-While-Revalidate)
+        async function initApp() {
+            updateSyncStatus("offline", "Carregando local...");
+
+            // Recupera viagem no tempo
+            const savedTimeTravel = localStorage.getItem('memhack_sm2_timetravel');
+            if (savedTimeTravel) {
+                daysAdvancedSimulated = parseInt(savedTimeTravel, 10);
+            }
+
+            // 1. CARREGAMENTO INSTANTÂNEO: Lê do cache local imediatamente
+            const cache = localStorage.getItem('memhack_sm2_decks_cache');
+            if (cache) {
+                deck = JSON.parse(cache);
+                renderDecksScreen();
+                updateSelectOptions();
+            } else {
+                // Se não há cache algum, usa o deck inicial padrão de forma instantânea
+                deck = [...initialDeck];
+                localStorage.setItem('memhack_sm2_decks_cache', JSON.stringify(deck));
+                renderDecksScreen();
+                updateSelectOptions();
+            }
+
+            // Inicializa e processa fila de sincronização salva localmente
+            syncQueue = JSON.parse(localStorage.getItem('memhack_sync_queue') || '[]');
+
+            if (daysAdvancedSimulated > 0) {
+                timeTravelBadge.classList.remove('hidden');
+                daysAdvancedText.innerText = daysAdvancedSimulated;
+            }
+
+            // Dispara sincronizador em background
+            processSyncQueue();
+
+            // 2. REVALIDAÇÃO SILENCIOSA: Busca dados frescos do Sheets em background
+            fetchDataSilently();
+        }
+
+        // Busca dados na nuvem sem travar a interface do usuário
+        async function fetchDataSilently() {
+            // Se houver itens na fila de sincronização local, evitamos sobresscrever o estado para não causar conflitos
+            if (syncQueue.length > 0) return;
+
+            updateSyncStatus("offline", "Buscando atualizações...");
+            try {
+                const response = await fetch(`${API_URL}?action=read`);
+                const remoteData = await response.json();
+                
+                if (remoteData && remoteData.length > 0) {
+                    deck = remoteData;
+                    localStorage.setItem('memhack_sm2_decks_cache', JSON.stringify(deck));
+                    updateSyncStatus("online", "Google Sheets Ativo");
+                    
+                    // Renderiza novamente sem afetar a digitação ou navegação ativa do usuário
+                    if (!screenDecks.classList.contains('hidden')) {
+                        renderDecksScreen();
+                    } else if (activeDeckName) {
+                        rebuildStudyQueue();
+                    }
+                } else if (deck.length === 0) {
+                    // Sem dados remotos e sem cache, inicializa salvando os padrões
+                    deck = [...initialDeck];
+                    localStorage.setItem('memhack_sm2_decks_cache', JSON.stringify(deck));
+                    renderDecksScreen();
+                    deck.forEach(card => enqueueSync('upsert', card));
+                }
+            } catch (error) {
+                console.error("Falha ao revalidar dados silenciosamente:", error);
+                updateSyncStatus("error", "Usando dados locais");
+            }
+        }
+
+        // Enfileira operações de sincronização em segundo plano
+        function enqueueSync(action, data) {
+            // Se for atualização de card (upsert), remove versões antigas deste mesmo card na fila para economizar requisições
+            if (action === 'upsert') {
+                syncQueue = syncQueue.filter(item => !(item.action === 'upsert' && item.data.id === data.id));
+            }
+            
+            syncQueue.push({ action, data, attempts: 0 });
+            saveSyncQueueToStorage();
+            processSyncQueue();
+        }
+
+        function saveSyncQueueToStorage() {
+            localStorage.setItem('memhack_sync_queue', JSON.stringify(syncQueue));
+        }
+
+        // Processa a fila em segundo plano sequencialmente
+        async function processSyncQueue() {
+            if (isSyncProcessing || syncQueue.length === 0) {
+                if (syncQueue.length === 0) {
+                    updateSyncStatus("online", "Google Sheets Ativo");
+                } else {
+                    updateSyncStatus("offline", `Sincronizando (${syncQueue.length} pendentes)`);
+                }
+                return;
+            }
+
+            isSyncProcessing = true;
+            updateSyncStatus("offline", `Sincronizando (${syncQueue.length} pendentes)`);
+
+            const currentJob = syncQueue[0];
+
+            try {
+                let url = `${API_URL}`;
+                let options = {};
+
+                if (currentJob.action === 'upsert') {
+                    url += `?action=upsert`;
+                    options = {
+                        method: 'POST',
+                        redirect: 'follow',
+                        body: JSON.stringify(currentJob.data)
+                    };
+                } else if (currentJob.action === 'delete') {
+                    url += `?action=delete&id=${currentJob.data}`;
+                    options = {
+                        method: 'GET'
+                    };
+                }
+
+                const response = await fetch(url, options);
+                const result = await response.json();
+
+                if (result && result.success) {
+                    // Remove item processado com sucesso
+                    syncQueue.shift();
+                    saveSyncQueueToStorage();
+                    isSyncProcessing = false;
+                    
+                    // Processa próximo item da fila recursivamente
+                    processSyncQueue();
+                } else {
+                    throw new Error("Erro na resposta do Apps Script");
+                }
+            } catch (error) {
+                console.error("Falha ao enviar job de sincronização:", error);
+                currentJob.attempts = (currentJob.attempts || 0) + 1;
+                
+                if (currentJob.attempts >= 3) {
+                    // Rotaciona o item falho para o fim da fila para não travar o processo
+                    const failedJob = syncQueue.shift();
+                    syncQueue.push(failedJob);
+                    saveSyncQueueToStorage();
+                }
+                
+                isSyncProcessing = false;
+                updateSyncStatus("error", `Erro de conexão (${syncQueue.length} pendentes)`);
+                
+                // Tenta novamente em 6 segundos se falhar
+                setTimeout(processSyncQueue, 6000);
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('memhack_sm2_timetravel', daysAdvancedSimulated.toString());
+            localStorage.setItem('memhack_sm2_decks_cache', JSON.stringify(deck));
+        }
+
+        function getSimulatedDateString() {
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() + daysAdvancedSimulated);
+            return targetDate.toISOString().split('T')[0];
+        }
+
+        // Integração Inteligente com API do Gemini (usando gemini-1.5-flash)
+        async function callGemini(promptText, systemInstruction, structuredResponseSchema = null) {
+            const apiKey = GEMINI_API_KEY;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }],
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                }
+            };
+
+            if (structuredResponseSchema) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json",
+                    responseSchema: structuredResponseSchema
+                };
+            }
+
+            let delay = 1000;
+            let lastError = null;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        const errPayload = await response.json().catch(() => ({}));
+                        const errMsg = errPayload.error?.message || `API retornou status ${response.status}`;
+                        throw new Error(errMsg);
+                    }
+                    
+                    const result = await response.json();
+                    return result;
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`Tentativa Gemini ${attempt + 1} falhou: ${error.message}`);
+                    if (attempt === 2) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+            throw lastError;
+        }
+
+        // Interface dos Baralhos
+        function renderDecksScreen() {
+            const container = document.getElementById('decks-list-container');
+            container.innerHTML = '';
+
+            const uniqueDeckNames = [...new Set(deck.map(card => card.deckName || "Geral"))];
+            const todayStr = getSimulatedDateString();
+            
+            let totalCards = deck.length;
+            document.getElementById('total-cards-label').innerText = `${totalCards} ${totalCards === 1 ? 'card' : 'cards'} no total`;
+
+            uniqueDeckNames.forEach(deckName => {
+                const deckCards = deck.filter(c => c.deckName === deckName);
+                const reviewTodayCount = deckCards.filter(c => c.nextReview <= todayStr).length;
+
+                const cardBox = document.createElement('div');
+                cardBox.className = 'bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex justify-between items-center hover:shadow-md transition duration-200';
+                cardBox.innerHTML = `
+                    <div class="flex-1 cursor-pointer" onclick="startStudying('${deckName}')">
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <span class="font-extrabold text-slate-900 text-sm">${deckName}</span>
+                        </div>
+                        <p class="text-xs text-slate-400 font-semibold">${deckCards.length} cards cadastrados</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        ${reviewTodayCount > 0 ? `
+                            <span class="bg-indigo-100 text-indigo-700 font-extrabold text-xs px-2.5 py-1 rounded-full border border-indigo-200 flex items-center gap-1" title="${reviewTodayCount} revisões pendentes para hoje">
+                                <i data-lucide="bell" class="w-3 h-3 text-indigo-600"></i> ${reviewTodayCount}
+                            </span>
+                        ` : `
+                            <span class="bg-emerald-50 text-emerald-600 font-extrabold text-xs px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1" title="Em dia!">
+                                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i> Ok
+                            </span>
+                        `}
+                        <button onclick="requestDeleteDeck('${deckName}')" class="text-slate-400 hover:text-rose-500 p-1.5 transition" title="Excluir Baralho Inteiro">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(cardBox);
+            });
+
+            updateSelectOptions();
+            lucide.createIcons();
+        }
+
+        // Deletar baralhos de forma instantânea localmente com background sync
+        window.requestDeleteDeck = function(deckName) {
+            showCustomConfirm(
+                "Excluir Baralho",
+                `Tem certeza que deseja excluir o baralho "${deckName}" e TODOS os seus cartões permanentemente?`,
+                () => {
+                    const cardsToDelete = deck.filter(c => c.deckName === deckName);
+                    
+                    // Remove do estado local instantaneamente
+                    deck = deck.filter(c => c.deckName !== deckName);
+                    saveToLocalStorage();
+                    
+                    // Agenda exclusões remotas em background
+                    for (const card of cardsToDelete) {
+                        enqueueSync('delete', card.id);
+                    }
+                    
+                    renderDecksScreen();
+                    showAlert(`Baralho "${deckName}" removido. Sincronizando alterações...`, "bg-amber-100 text-amber-800 border border-amber-200");
+                }
+            );
+        };
+
+        function updateSelectOptions() {
+            const select = document.getElementById('select-deck');
+            const selectAi = document.getElementById('select-deck-ai');
+            select.innerHTML = '';
+            selectAi.innerHTML = '';
+            
+            const uniqueDeckNames = [...new Set(deck.map(card => card.deckName || "Geral"))];
+            
+            if (uniqueDeckNames.length === 0) {
+                const opt1 = document.createElement('option');
+                opt1.value = "Geral"; opt1.innerText = "Geral";
+                select.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = "Geral"; opt2.innerText = "Geral";
+                selectAi.appendChild(opt2);
+                return;
+            }
+
+            uniqueDeckNames.forEach(name => {
+                const opt1 = document.createElement('option');
+                opt1.value = name; opt1.innerText = name;
+                select.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = name; opt2.innerText = name;
+                selectAi.appendChild(opt2);
+            });
+        }
+
+        // Interface dos Baralhos
+        window.startStudying = function(deckName) {
+            activeDeckName = deckName;
+            btnBackToDecks.classList.remove('hidden');
+            brandLogo.classList.add('hidden');
+            screenDecks.classList.add('hidden');
+            screenStudy.classList.remove('hidden');
+            rebuildStudyQueue();
+        };
+
+        function exitStudyScreen() {
+            activeDeckName = null;
+            btnBackToDecks.classList.add('hidden');
+            brandLogo.classList.remove('hidden');
+            screenStudy.classList.add('hidden');
+            screenDecks.classList.remove('hidden');
+            renderDecksScreen();
+        }
+
+        btnBackToDecks.addEventListener('click', exitStudyScreen);
+
+        function rebuildStudyQueue() {
+            if (!activeDeckName) return;
+            const todayStr = getSimulatedDateString();
+            
+            studyQueue = deck.filter(card => {
+                return card.deckName === activeDeckName && card.nextReview <= todayStr;
+            });
+
+            studyQueue.sort((a, b) => new Date(a.nextReview) - new Date(b.nextReview));
+            currentQueueIndex = studyQueue.length > 0 ? 0 : -1;
+            renderActiveCard();
+        }
+
+        function renderActiveCard() {
+            resetCardState();
+            document.getElementById('study-deck-title').innerText = activeDeckName.toUpperCase();
+
+            if (studyQueue.length === 0 || currentQueueIndex === -1) {
+                displayFront.innerText = "🎉 Parabéns! Você revisou todo este baralho por hoje.";
+                audioPlayBtn.classList.add('hidden');
+                geminiExplainBtn.classList.add('hidden');
+                revealBtn.classList.add('hidden');
+                queueCounter.innerText = "0 de 0";
+                
+                const cardMetadata = document.getElementById('card-metadata');
+                cardMetadata.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> Livre!`;
+                lucide.createIcons();
+                return;
+            }
+
+            const currentCard = studyQueue[currentQueueIndex];
+            displayFront.innerText = currentCard.english;
+            displayBack.innerText = currentCard.portuguese;
+            displayContext.innerText = currentCard.context || "Sem notas adicionadas.";
+            queueCounter.innerText = `${currentQueueIndex + 1} de ${studyQueue.length} na fila`;
+            
+            updateIntervalLabelsOnFeedbackButtons(currentCard);
+
+            const cardMetadata = document.getElementById('card-metadata');
+            cardMetadata.innerHTML = `
+                <i data-lucide="calendar" class="w-3 h-3"></i> I: ${currentCard.interval}d | EF: ${parseFloat(currentCard.easeFactor).toFixed(1)}
+            `;
+
+            audioPlayBtn.classList.remove('hidden');
+            geminiExplainBtn.classList.remove('hidden');
+            revealBtn.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function updateIntervalLabelsOnFeedbackButtons(card) {
+            const tempCard = {
+                interval: parseInt(card.interval) || 1,
+                repetitions: parseInt(card.repetitions) || 0,
+                easeFactor: parseFloat(card.easeFactor) || 2.5
+            };
+            
+            document.getElementById('label-easy-interval-3').innerText = `${calculateSM2(tempCard, 3).interval}d`;
+            document.getElementById('label-easy-interval-4').innerText = `${calculateSM2(tempCard, 4).interval}d`;
+            document.getElementById('label-easy-interval-5').innerText = `${calculateSM2(tempCard, 5).interval}d`;
+        }
+
+        function resetCardState() {
+            versoContainer.classList.add('hidden');
+            voiceRecordingArea.classList.add('hidden');
+            ankiFeedbackPanel.classList.add('hidden');
+            revealBtn.classList.remove('hidden');
+            speechTranscript.classList.add('hidden');
+            speechTranscript.innerText = "";
+            recordInstructions.innerText = "Pressione para falar o chunk";
+            alertBox.classList.add('hidden');
+            geminiEvalSpeechBtn.classList.add('hidden');
+        }
+
+        function calculateSM2(card, score) {
+            let nextInterval = 1;
+            let nextRepetitions = 0;
+            let nextEaseFactor = card.easeFactor;
+
+            if (score >= 3) {
+                if (card.repetitions === 0) {
+                    nextInterval = 1;
+                } else if (card.repetitions === 1) {
+                    nextInterval = 6;
+                } else {
+                    nextInterval = Math.round(card.interval * card.easeFactor);
+                }
+                nextRepetitions = card.repetitions + 1;
+            } else {
+                nextInterval = 1;
+                nextRepetitions = 0;
+            }
+
+            nextEaseFactor = card.easeFactor + (0.1 - (5 - score) * (0.08 + (5 - score) * 0.02));
+            if (nextEaseFactor < 1.3) {
+                nextEaseFactor = 1.3;
+            }
+
+            return {
+                interval: nextInterval,
+                repetitions: nextRepetitions,
+                easeFactor: nextEaseFactor
+            };
+        }
+
+        // Processamento instantâneo do card sem atraso de tela (Instant Sync)
+        window.assessCard = function(score) {
+            if (studyQueue.length === 0 || currentQueueIndex === -1) return;
+
+            const currentCard = studyQueue[currentQueueIndex];
+            const cardInDeckIndex = deck.findIndex(c => c.id === currentCard.id);
+            
+            if (cardInDeckIndex !== -1) {
+                const cardRef = deck[cardInDeckIndex];
+                const cleanCard = {
+                    interval: parseInt(cardRef.interval) || 1,
+                    repetitions: parseInt(cardRef.repetitions) || 0,
+                    easeFactor: parseFloat(cardRef.easeFactor) || 2.5
+                };
+
+                const results = calculateSM2(cleanCard, score);
+
+                deck[cardInDeckIndex].interval = results.interval;
+                deck[cardInDeckIndex].repetitions = results.repetitions;
+                deck[cardInDeckIndex].easeFactor = results.easeFactor;
+
+                const simulatedToday = new Date();
+                simulatedToday.setDate(simulatedToday.getDate() + daysAdvancedSimulated + results.interval);
+                deck[cardInDeckIndex].nextReview = simulatedToday.toISOString().split('T')[0];
+
+                // 1. Grava instantaneamente no cache local
+                saveToLocalStorage();
+
+                // 2. Agenda sincronização em background na fila assíncrona
+                enqueueSync('upsert', deck[cardInDeckIndex]);
+                
+                let feedbackText = "";
+                if (score === 0) feedbackText = "Voltando para o início!";
+                if (score === 3) feedbackText = `Difícil. Retorno em ${results.interval}d.`;
+                if (score === 4) feedbackText = `Bom progresso! Retorno em ${results.interval}d.`;
+                if (score === 5) feedbackText = `Fácil! Retorno em ${results.interval}d.`;
+
+                showAlert(feedbackText, "bg-indigo-100 text-indigo-950 border border-indigo-200");
+            }
+
+            // Avança para o próximo card instantaneamente
+            rebuildStudyQueue();
+        };
+
+        // Viagem no tempo para testes locais
+        document.getElementById('btn-time-travel').addEventListener('click', () => {
+            daysAdvancedSimulated += 1;
+            timeTravelBadge.classList.remove('hidden');
+            daysAdvancedText.innerText = daysAdvancedSimulated;
+            saveToLocalStorage();
+            
+            showAlert(`Avançado 1 dia no tempo na simulação!`, "bg-amber-100 text-amber-800 border border-amber-300");
+            
+            if (activeDeckName) {
+                rebuildStudyQueue();
+            } else {
+                renderDecksScreen();
+            }
+        });
+
+        revealBtn.addEventListener('click', () => {
+            revealBtn.classList.add('hidden');
+            versoContainer.classList.remove('hidden');
+            voiceRecordingArea.classList.remove('hidden');
+            ankiFeedbackPanel.classList.remove('hidden');
+            
+            if (studyQueue.length > 0 && currentQueueIndex !== -1) {
+                playSpeech(studyQueue[currentQueueIndex].english);
+            }
+        });
+
+        audioPlayBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (studyQueue.length > 0 && currentQueueIndex !== -1) {
+                playSpeech(studyQueue[currentQueueIndex].english);
+            }
+        });
+
+        function playSpeech(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const speech = new SpeechSynthesisUtterance(text);
+                speech.lang = 'en-US';
+                const voices = window.speechSynthesis.getVoices();
+                let selectedVoice = voices.find(v => v.name === SELECTED_VOICE_NAME);
+                
+                // Fallback se a voz selecionada não estiver disponível
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Online'))) 
+                                  || voices.find(v => v.lang.startsWith('en') && v.localService === false)
+                                  || voices.find(v => v.lang.startsWith('en'));
+                }
+                
+                if (selectedVoice) speech.voice = selectedVoice;
+                window.speechSynthesis.speak(speech);
+            } else {
+                showAlert("Dispositivo sem suporte a pronúncia nativa.", "bg-rose-100 text-rose-700");
+            }
+        }
+
+        function updateVoiceSelectOptions() {
+            const select = document.getElementById('settings-tts-voice');
+            if (!select) return;
+            select.innerHTML = '';
+            
+            if ('speechSynthesis' in window) {
+                const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+                if (voices.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = "";
+                    opt.innerText = "Buscando vozes...";
+                    select.appendChild(opt);
+                    return;
+                }
+                
+                // Opção padrão de fallback
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = "";
+                defaultOpt.innerText = "-- Voz Padrão do Sistema (Automática) --";
+                if (!SELECTED_VOICE_NAME) defaultOpt.selected = true;
+                select.appendChild(defaultOpt);
+                
+                voices.forEach(voice => {
+                    const opt = document.createElement('option');
+                    opt.value = voice.name;
+                    opt.innerText = `${voice.name} (${voice.localService ? 'Offline' : 'Online / Nuvem'})`;
+                    if (voice.name === SELECTED_VOICE_NAME) {
+                        opt.selected = true;
+                    }
+                    select.appendChild(opt);
+                });
+            } else {
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.innerText = "Sintetizador não suportado";
+                select.appendChild(opt);
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = updateVoiceSelectOptions;
+            // Carrega inicialmente
+            setTimeout(updateVoiceSelectOptions, 500);
+        }
+
+        function getLcsDiff(targetWords, spokenWords) {
+            const clean = w => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").trim();
+            const n = targetWords.length;
+            const m = spokenWords.length;
+            
+            const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+            
+            for (let i = 1; i <= n; i++) {
+                for (let j = 1; j <= m; j++) {
+                    if (clean(targetWords[i - 1]) === clean(spokenWords[j - 1])) {
+                        dp[i][j] = dp[i - 1][j - 1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                    }
+                }
+            }
+            
+            let i = n, j = m;
+            const diff = [];
+            
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && clean(targetWords[i - 1]) === clean(spokenWords[j - 1])) {
+                    diff.unshift({ type: 'match', word: targetWords[i - 1] });
+                    i--;
+                    j--;
+                } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+                    diff.unshift({ type: 'extra', word: spokenWords[j - 1] });
+                    j--;
+                } else {
+                    diff.unshift({ type: 'missing', word: targetWords[i - 1] });
+                    i--;
+                }
+            }
+            return diff;
+        }
+
+        // Escuta e Reconhecimento de Voz (Microfone)
+        let voiceRecInstance;
+        let recordingStatus = false;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+            voiceRecInstance = new SpeechRecognitionClass();
+            voiceRecInstance.lang = 'en-US';
+            voiceRecInstance.continuous = false;
+            voiceRecInstance.interimResults = false;
+
+            voiceRecInstance.onstart = () => {
+                recordingStatus = true;
+                recordInstructions.innerText = "Ouvindo... Fale o chunk agora!";
+                recordBtn.classList.replace('bg-indigo-600', 'bg-red-500');
+                micIconSvg.setAttribute('data-lucide', 'mic-off');
+                lucide.createIcons();
+            };
+
+            voiceRecInstance.onend = () => {
+                recordingStatus = false;
+                recordBtn.classList.replace('bg-red-500', 'bg-indigo-600');
+                micIconSvg.setAttribute('data-lucide', 'mic');
+                lucide.createIcons();
+            };
+
+            voiceRecInstance.onresult = (event) => {
+                const spokenText = event.results[0][0].transcript;
+                
+                const targetText = studyQueue[currentQueueIndex].english;
+                const targetWords = targetText.split(/\s+/).filter(Boolean);
+                const spokenWords = spokenText.split(/\s+/).filter(Boolean);
+                const diff = getLcsDiff(targetWords, spokenWords);
+                
+                const matchCount = diff.filter(item => item.type === 'match').length;
+                const scorePercent = Math.round((matchCount / targetWords.length) * 100);
+                
+                let html = `
+                    <div class="flex flex-col items-center gap-1.5 w-full mt-2">
+                        <span class="text-[8px] text-slate-400 font-extrabold uppercase tracking-wider">Comparação de Pronúncia:</span>
+                        <div class="flex flex-wrap gap-1 justify-center text-xs font-semibold py-1 bg-white border border-slate-200 rounded-xl px-3 py-2 w-full max-w-[90%] shadow-sm">
+                `;
+                
+                diff.forEach(item => {
+                    if (item.type === 'match') {
+                        html += `<span class="text-emerald-600 font-bold" title="Correto">${item.word}</span>`;
+                    } else if (item.type === 'missing') {
+                        html += `<span class="text-slate-300 line-through" title="Faltou: ${item.word}">${item.word}</span>`;
+                    } else if (item.type === 'extra') {
+                        html += `<span class="text-rose-500 border-b border-dashed border-rose-400" title="Extra: ${item.word}">${item.word}</span>`;
+                    }
+                });
+                
+                html += `
+                        </div>
+                        <div class="text-[10px] font-bold ${scorePercent >= 80 ? 'text-emerald-600' : scorePercent >= 50 ? 'text-amber-600' : 'text-rose-500'}">
+                            Precisão: ${scorePercent}%
+                        </div>
+                    </div>
+                `;
+                
+                speechTranscript.dataset.rawText = spokenText;
+                speechTranscript.innerHTML = html;
+                speechTranscript.classList.remove('hidden');
+                geminiEvalSpeechBtn.classList.remove('hidden'); 
+
+                if (scorePercent === 100) {
+                    showAlert("🎯 Incrível! Pronúncia perfeita reconhecida!", "bg-emerald-100 text-emerald-800 border border-emerald-300");
+                } else if (scorePercent >= 70) {
+                    showAlert("Muito bom! Pronúncia quase perfeita.", "bg-emerald-50 text-emerald-700 border border-emerald-200");
+                } else {
+                    showAlert("Pronúncia capturada! Tente novamente ou use a IA para avaliar.", "bg-amber-100 text-amber-800 border border-amber-300");
+                }
+            };
+
+            voiceRecInstance.onerror = (event) => {
+                console.error("Speech Recognition Error:", event.error);
+                recordingStatus = false;
+                recordBtn.classList.replace('bg-red-500', 'bg-indigo-600');
+                micIconSvg.setAttribute('data-lucide', 'mic');
+                lucide.createIcons();
+                
+                if (event.error === 'not-allowed') {
+                    recordInstructions.innerHTML = "<span class='text-rose-500 font-bold'>Erro de Permissão!</span> Abra o app em tela cheia/nova aba para liberar o microfone no navegador.";
+                    showGenericAlertModal("Bloqueio de Microfone", "Os navegadores bloqueiam o uso do microfone dentro de painéis de visualização embutidos (iframes). Para corrigir isso, clique no ícone de nova aba ou abra o preview em tela cheia para autorizar o microfone!");
+                } else {
+                    recordInstructions.innerText = `Erro (${event.error || 'microfone'}). Tente de novo.`;
+                }
+            };
+        } else {
+            recordInstructions.innerText = "Microfone indisponível no navegador.";
+            recordBtn.disabled = true;
+            recordBtn.classList.add('opacity-50');
+        }
+
+        recordBtn.addEventListener('click', () => {
+            if (!voiceRecInstance) return;
+            if (recordingStatus) {
+                voiceRecInstance.stop();
+            } else {
+                try {
+                    voiceRecInstance.start();
+                } catch(e) {
+                    console.error("Erro ao iniciar captura de voz:", e);
+                }
+            }
+        });
+
+        // Explicações e Avaliações com a API do Gemini
+        geminiExplainBtn.addEventListener('click', async () => {
+            if (studyQueue.length === 0 || currentQueueIndex === -1) return;
+            const currentCard = studyQueue[currentQueueIndex];
+            
+            setLoading(true, "Gemini está gerando explicações...");
+            
+            const prompt = `Analise o chunk de inglês: "${currentCard.english}". 
+            Tradução atual cadastrada: "${currentCard.portuguese}". 
+            Explique o significado de forma amigável para um estudante brasileiro. 
+            Forneça uma explicação curta (máximo de 3 frases) em português de quando usar e o que significa de forma idiomática.
+            Em seguida, forneça um minidiálogo fictício super curto de exemplo entre Person A e Person B usando o chunk na prática (com tradução ao lado ou abaixo de cada fala).`;
+            
+            const sysPrompt = "Você é um professor de inglês nativo especialista no método de chunks e abordagem lexical. Formate sua resposta usando HTML limpo (tags <p>, <strong> e <br>) para fácil leitura.";
+
+            try {
+                const response = await callGemini(prompt, sysPrompt);
+                const explanationText = response?.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (explanationText) {
+                    document.getElementById('gemini-explain-body').innerHTML = explanationText;
+                    openModal('modal-gemini-explain');
+                } else {
+                    showGenericAlertModal("Erro de Resposta", "O Gemini não retornou nenhum dado. Tente novamente.");
+                }
+            } catch (err) {
+                console.error("Erro ao chamar API do Gemini:", err);
+                showGenericAlertModal("Erro de Conexão Gemini", `Não foi possível conectar com a inteligência artificial do Gemini.<br><br><strong>Detalhe:</strong> ${err.message || 'Sem resposta do servidor'}`);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        geminiEvalSpeechBtn.addEventListener('click', async () => {
+            if (studyQueue.length === 0 || currentQueueIndex === -1) return;
+            const currentCard = studyQueue[currentQueueIndex];
+            const spokenText = speechTranscript.dataset.rawText || "";
+            
+            setLoading(true, "Gemini está avaliando sua pronúncia...");
+            
+            const prompt = `Frase ideal (alvo em inglês): "${currentCard.english}". 
+            Frase falada pelo aluno (conforme capturado pelo Speech Recognition): "${spokenText}".
+            Avalie se a pronúncia está inteligível e se o aluno acertou os sons das palavras da frase. 
+            Seja encorajador, pontue quais palavras específicas o aluno pode ter pronunciado de forma diferente ou incorreta, ou se o microfone capturou algo errado. 
+            Responda em português de forma concisa e direta, em no máximo 3 linhas.`;
+            
+            const sysPrompt = "Você é um instrutor de pronúncia de inglês de alta performance. Seja extremamente objetivo, curto e amigável.";
+
+            try {
+                const response = await callGemini(prompt, sysPrompt);
+                const evalResultText = response?.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (evalResultText) {
+                    document.getElementById('gemini-explain-body').innerHTML = `
+                        <div class="space-y-3">
+                            <div class="bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
+                                <p class="text-xs font-bold text-indigo-800 mb-1">Seu Speaking:</p>
+                                <p class="text-[11px] font-mono text-slate-700 italic">"${spokenText}"</p>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                                <p class="text-xs font-bold text-slate-800 mb-1">Feedback do Gemini AI:</p>
+                                <p class="text-xs text-slate-600">${evalResultText}</p>
+                            </div>
+                        </div>
+                    `;
+                    openModal('modal-gemini-explain');
+                } else {
+                    showGenericAlertModal("Erro", "Não foi possível processar o feedback. Tente mais uma vez.");
+                }
+            } catch (err) {
+                console.error("Erro ao chamar API do Gemini para Speaking:", err);
+                showGenericAlertModal("Erro de Conexão Gemini", `Não foi possível obter a avaliação de fala do Gemini.<br><br><strong>Detalhe:</strong> ${err.message || 'Sem conexão'}`);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        document.getElementById('btn-generate-ai-chunks').addEventListener('click', async () => {
+            const rawText = document.getElementById('ai-input-text').value.trim();
+            if (!rawText) {
+                showAlert("Por favor, cole algum texto em inglês primeiro.", "bg-rose-100 text-rose-800");
+                return;
+            }
+
+            setLoading(true, "Gemini está minerando o texto...");
+
+            const prompt = `Analise o seguinte fragmento e extraia até 5 dos melhores 'chunks' ou expressões úteis em inglês contidos nele. 
+            Para cada chunk, crie uma tradução natural em português do Brasil e uma breve nota de contexto/uso em português explicando quando usar essa expressão.
+            
+            Texto para analisar: "${rawText}"`;
+
+            const sysPrompt = "Você é um assistente pedagógico de extração de conteúdo para flashcards do Anki/Memhack. Você deve obrigatoriamente retornar a resposta estruturada estritamente de acordo com o esquema JSON solicitado.";
+
+            const structuredSchema = {
+                type: "ARRAY",
+                description: "Lista de chunks extraídos do texto fornecido",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        english: { type: "STRING", description: "O bloco de linguagem ou expressão idiomática em inglês extraída." },
+                        portuguese: { type: "STRING", description: "A tradução natural do chunk para o português." },
+                        context: { type: "STRING", description: "Breve explicação em português sobre quando ou como usar este chunk." }
+                    },
+                    required: ["english", "portuguese", "context"]
+                }
+            };
+
+            try {
+                const response = await callGemini(prompt, sysPrompt, structuredSchema);
+                const jsonText = response?.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (jsonText) {
+                    currentExtractedAiCards = JSON.parse(jsonText);
+                    renderAiPreviewList();
+                } else {
+                    showGenericAlertModal("Erro", "O Gemini não retornou chunks válidos do texto.");
+                }
+            } catch (error) {
+                console.error("Erro na extração inteligente do Gemini:", error);
+                showGenericAlertModal("Erro de Conexão Gemini", `Não foi possível extrair os chunks inteligente com a IA.<br><br><strong>Detalhe:</strong> ${error.message || 'Conexão falhou'}`);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        function renderAiPreviewList() {
+            const listContainer = document.getElementById('ai-preview-list');
+            listContainer.innerHTML = '';
+            
+            if (!currentExtractedAiCards || currentExtractedAiCards.length === 0) {
+                listContainer.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Nenhum chunk estruturado gerado.</p>';
+                return;
+            }
+
+            currentExtractedAiCards.forEach((card, idx) => {
+                const item = document.createElement('div');
+                item.className = 'p-3 bg-slate-50 border border-slate-150 rounded-xl space-y-1.5 flex items-start gap-2.5';
+                item.innerHTML = `
+                    <input type="checkbox" id="chk-ai-card-${idx}" checked class="mt-1 accent-indigo-600 rounded">
+                    <div class="flex-1 text-left">
+                        <p class="text-xs font-bold text-slate-900">${card.english}</p>
+                        <p class="text-[11px] text-indigo-600 font-semibold">${card.portuguese}</p>
+                        <p class="text-[9px] text-slate-400 italic">${card.context}</p>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+
+            document.getElementById('ai-preview-section').classList.remove('hidden');
+        }
+
+        // Importação inteligente de cartas usando Optimistic Background Sync
+        document.getElementById('btn-import-ai-selected').addEventListener('click', () => {
+            const selectedDeckName = document.getElementById('select-deck-ai').value;
+            let importedCount = 0;
+
+            for (let idx = 0; idx < currentExtractedAiCards.length; idx++) {
+                const checkbox = document.getElementById(`chk-ai-card-${idx}`);
+                if (checkbox && checkbox.checked) {
+                    const aiCard = currentExtractedAiCards[idx];
+                    
+                    const newCardObj = {
+                        id: Date.now() + Math.floor(Math.random() * 1000), 
+                        deckName: selectedDeckName,
+                        english: aiCard.english,
+                        portuguese: aiCard.portuguese,
+                        context: aiCard.context,
+                        interval: 1,
+                        repetitions: 0,
+                        easeFactor: 2.5,
+                        nextReview: getSimulatedDateString()
+                    };
+
+                    deck.push(newCardObj);
+                    
+                    // Enfileira salvamento remoto assincronamente em background
+                    enqueueSync('upsert', newCardObj);
+                    importedCount++;
+                }
+            }
+
+            // Grava alterações no cache local instantaneamente
+            saveToLocalStorage();
+            
+            closeModal('modal-add-card');
+            showAlert(`Importados ${importedCount} cards com sucesso! Sincronizando com a nuvem...`, "bg-emerald-100 text-emerald-800 border border-emerald-200");
+            
+            document.getElementById('ai-preview-section').classList.add('hidden');
+            document.getElementById('ai-input-text').value = '';
+            currentExtractedAiCards = [];
+
+            if (activeDeckName) {
+                rebuildStudyQueue();
+            } else {
+                renderDecksScreen();
+            }
+        });
+
+        // Modais de Criação e Controle de Visualização
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'modal-add-card') {
+                updateSelectOptions();
+            }
+            if (id === 'modal-deck-list') buildDeckListMarkup();
+            if (id === 'modal-stats-dashboard') buildStatsMarkup();
+            if (id === 'modal-settings') {
+                document.getElementById('settings-api-key').value = GEMINI_API_KEY;
+                document.getElementById('settings-apps-script').value = API_URL;
+                updateVoiceSelectOptions();
+            }
+        }
+
+        window.closeModal = function(id) {
+            document.getElementById(id).classList.add('hidden');
+        };
+
+        const tabManualBtn = document.getElementById('tab-add-manual');
+        const tabAiBtn = document.getElementById('tab-add-ai');
+        const formManual = document.getElementById('card-creation-form');
+        const formAi = document.getElementById('ai-extraction-container');
+
+        tabManualBtn.addEventListener('click', () => {
+            tabManualBtn.className = "flex-1 pb-2 border-b-2 border-indigo-600 text-indigo-600 font-bold";
+            tabAiBtn.className = "flex-1 pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1";
+            formManual.classList.remove('hidden');
+            formAi.classList.add('hidden');
+        });
+
+        tabAiBtn.addEventListener('click', () => {
+            tabAiBtn.className = "flex-1 pb-2 border-b-2 border-indigo-600 text-indigo-600 font-bold flex items-center justify-center gap-1";
+            tabManualBtn.className = "flex-1 pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600";
+            formManual.classList.add('hidden');
+            formAi.classList.remove('hidden');
+        });
+
+        document.getElementById('nav-decks').addEventListener('click', () => {
+            exitStudyScreen();
+            closeModal('modal-add-card');
+            closeModal('modal-deck-list');
+            closeModal('modal-stats-dashboard');
+            closeModal('modal-settings');
+        });
+
+        document.getElementById('nav-add').addEventListener('click', () => {
+            openModal('modal-add-card');
+        });
+
+        document.getElementById('nav-list').addEventListener('click', () => {
+            openModal('modal-deck-list');
+        });
+
+        document.getElementById('btn-stats').addEventListener('click', () => {
+            openModal('modal-stats-dashboard');
+        });
+
+        document.getElementById('btn-settings').addEventListener('click', () => {
+            openModal('modal-settings');
+        });
+
+        document.getElementById('settings-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const apiKeyInput = document.getElementById('settings-api-key').value.trim();
+            const urlInput = document.getElementById('settings-apps-script').value.trim();
+            const voiceInput = document.getElementById('settings-tts-voice').value;
+
+            if (!apiKeyInput || !urlInput) {
+                showAlert("Ambos os campos são obrigatórios.", "bg-rose-100 text-rose-800");
+                return;
+            }
+
+            GEMINI_API_KEY = apiKeyInput;
+            API_URL = urlInput;
+            SELECTED_VOICE_NAME = voiceInput;
+
+            localStorage.setItem('memhack_api_key', GEMINI_API_KEY);
+            localStorage.setItem('memhack_api_url', API_URL);
+            localStorage.setItem('memhack_tts_voice', SELECTED_VOICE_NAME);
+
+            closeModal('modal-settings');
+            showAlert("Configurações salvas com sucesso!", "bg-emerald-100 text-emerald-800 border border-emerald-200");
+            
+            // Dispara revalidação silenciosa
+            fetchDataSilently();
+        });
+
+        document.getElementById('btn-reset-settings').addEventListener('click', () => {
+            document.getElementById('settings-api-key').value = DEFAULT_API_KEY;
+            document.getElementById('settings-apps-script').value = DEFAULT_API_URL;
+            document.getElementById('settings-tts-voice').value = "";
+            showAlert("Valores restaurados nos campos. Clique em Salvar para aplicar.", "bg-amber-100 text-amber-800 border border-amber-200");
+        });
+
+        // Salva card criado manualmente de forma instantânea
+        document.getElementById('card-creation-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const selectedSelectDeck = document.getElementById('select-deck').value;
+            const newDeckInput = document.getElementById('new-deck-name').value.trim();
+            const chosenDeckName = newDeckInput !== "" ? newDeckInput : selectedSelectDeck;
+
+            const englishText = document.getElementById('input-english').value.trim();
+            const portugueseText = document.getElementById('input-portuguese').value.trim();
+            const contextText = document.getElementById('input-context').value.trim();
+
+            const newCardObj = {
+                id: Date.now(),
+                deckName: chosenDeckName,
+                english: englishText,
+                portuguese: portugueseText,
+                context: contextText,
+                interval: 1,
+                repetitions: 0,
+                easeFactor: 2.5,
+                nextReview: getSimulatedDateString()
+            };
+
+            deck.push(newCardObj);
+            
+            // Grava localmente e agenda sincronização silenciosa
+            saveToLocalStorage();
+            enqueueSync('upsert', newCardObj);
+            
+            closeModal('modal-add-card');
+            document.getElementById('card-creation-form').reset();
+            
+            showAlert(`Card salvo localmente. Sincronizando com o Google Sheets...`, "bg-emerald-100 text-emerald-800 border border-emerald-200");
+            
+            if (activeDeckName === chosenDeckName) {
+                rebuildStudyQueue();
+            } else {
+                renderDecksScreen();
+            }
+        });
+
+        function buildDeckListMarkup() {
+            const container = document.getElementById('deck-items-holder');
+            container.innerHTML = '';
+
+            if (deck.length === 0) {
+                container.innerHTML = `<p class="text-center text-slate-400 py-10 text-sm">Sem cards cadastrados.</p>`;
+                return;
+            }
+
+            deck.forEach((card) => {
+                const element = document.createElement('div');
+                element.className = 'bg-slate-50 p-4 rounded-2xl border border-slate-200/60 flex justify-between items-start gap-3';
+                element.innerHTML = `
+                    <div class="flex-1 space-y-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[9px] bg-indigo-100 text-indigo-700 font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">${card.deckName}</span>
+                        </div>
+                        <p class="font-bold text-slate-900 leading-tight text-sm mt-1">${card.english}</p>
+                        <p class="text-xs text-indigo-600 font-semibold">${card.portuguese}</p>
+                        ${card.context ? `<p class="text-[10px] text-slate-400 italic">${card.context}</p>` : ''}
+                        <div class="flex gap-2 mt-1.5">
+                            <span class="text-[9px] bg-slate-200/70 text-slate-600 px-1.5 py-0.5 rounded font-mono">Intervalo: ${card.interval}d</span>
+                            <span class="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-mono font-bold">Revisão: ${card.nextReview}</span>
+                        </div>
+                    </div>
+                    <button onclick="requestDeleteCard(${card.id})" class="text-slate-400 hover:text-rose-500 p-1 transition" title="Excluir Card">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                container.appendChild(element);
+            });
+            lucide.createIcons();
+        }
+
+        // Deleta flashcard com resposta instantânea e background sync
+        window.requestDeleteCard = function(id) {
+            const cardObj = deck.find(c => c.id === id);
+            showCustomConfirm(
+                "Excluir Flashcard",
+                `Tem certeza de que deseja remover o card "${cardObj ? cardObj.english : ''}" permanentemente?`,
+                () => {
+                    // Remove do estado local instantaneamente
+                    deck = deck.filter(item => item.id !== id);
+                    saveToLocalStorage();
+                    
+                    // Agenda exclusão remota em background
+                    enqueueSync('delete', id);
+                    
+                    buildDeckListMarkup();
+                    
+                    if (activeDeckName) {
+                        rebuildStudyQueue();
+                    } else {
+                        renderDecksScreen();
+                    }
+                    showAlert("Card removido localmente. Sincronizando com a nuvem...", "bg-amber-100 text-amber-800");
+                }
+            );
+        };
+
+        function buildStatsMarkup() {
+            document.getElementById('stat-total-cards').innerText = deck.length;
+            const matured = deck.filter(c => parseInt(c.interval) > 15).length;
+            document.getElementById('stat-matured-cards').innerText = matured;
+        }
+
+        function setLoading(show, text = "Processando...") {
+            const overlay = document.getElementById('loading-overlay');
+            const label = document.getElementById('loading-message');
+            label.innerText = text;
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function updateSyncStatus(status, text) {
+            syncStatusText.innerText = text;
+            syncStatusDot.className = "w-1.5 h-1.5 rounded-full";
+            
+            if (status === "online") {
+                syncStatusDot.classList.add("bg-emerald-500");
+            } else if (status === "offline") {
+                syncStatusDot.classList.add("bg-amber-500", "animate-pulse");
+            } else {
+                syncStatusDot.classList.add("bg-rose-500");
+            }
+        }
+
+        function showCustomConfirm(title, description, onConfirmCallback) {
+            const dialog = document.getElementById('custom-confirm-dialog');
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-description').innerText = description;
+            
+            dialog.classList.remove('hidden');
+
+            const btnCancel = document.getElementById('btn-confirm-cancel');
+            const btnOk = document.getElementById('btn-confirm-ok');
+
+            const cleanUp = () => {
+                dialog.classList.add('hidden');
+                btnCancel.onclick = null;
+                btnOk.onclick = null;
+            };
+
+            btnCancel.onclick = () => cleanUp();
+            btnOk.onclick = () => {
+                cleanUp();
+                onConfirmCallback();
+            };
+        }
+
+        // Caixa de diálogo genérica de erros para substituir alert()
+        function showGenericAlertModal(title, textContent) {
+            showCustomConfirm(title, textContent, () => {});
+            // Transforma o botão "Ok" de exclusão em um botão comum de confirmação amigável
+            const confirmBtn = document.getElementById('btn-confirm-ok');
+            confirmBtn.innerText = "Entendido";
+            confirmBtn.className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs transition";
+            
+            const cancelBtn = document.getElementById('btn-confirm-cancel');
+            cancelBtn.classList.add('hidden');
+
+            // Quando fechar, reconstrói o botão padrão
+            const originalCleanup = confirmBtn.onclick;
+            confirmBtn.onclick = () => {
+                document.getElementById('custom-confirm-dialog').classList.add('hidden');
+                confirmBtn.innerText = "Sim, Excluir";
+                confirmBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl text-xs transition";
+                cancelBtn.classList.remove('hidden');
+            };
+        }
+
+        function showAlert(msg, styles) {
+            alertBox.className = `p-3 rounded-xl text-xs font-semibold text-center ${styles}`;
+            alertBox.innerText = msg;
+            alertBox.classList.remove('hidden');
+            setTimeout(() => {
+                alertBox.classList.add('hidden');
+            }, 4000);
+        }
+
+        window.onload = function() {
+            initApp();
+        };
+    </script>
+</body>
+</html>
